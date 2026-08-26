@@ -167,6 +167,7 @@
         <option value="#f0e68c">Khaki / Yellow</option>
         <option value="#e6f2ff">Light Blue</option>
         <option value="#1e1e1e">Dark Grey</option>
+        <option value="#000000">Black</option>
       </select>
     </div>
   </div>
@@ -216,13 +217,17 @@ let typingActive = false;
 const setupPanel = document.getElementById('setup-panel');
 const stageBox = document.getElementById('stage-box');
 const resultsStage = document.getElementById('results-stage');
+const themeSelect = document.getElementById('theme-mode');
+const boxBgSelect = document.getElementById('box-bg');
 
-// Apply Theme
-document.getElementById('theme-mode').addEventListener('change', (e) => {
+// Handle Theme Switching & Auto-Adjust Default Box Background
+themeSelect.addEventListener('change', (e) => {
   if (e.target.value === 'dark') {
     document.body.classList.add('dark-mode');
+    boxBgSelect.value = '#1e1e1e';
   } else {
     document.body.classList.remove('dark-mode');
+    boxBgSelect.value = '#ffffff';
   }
 });
 
@@ -236,8 +241,8 @@ document.getElementById('btn-start').addEventListener('click', () => {
 
   experimentConfig = {
     targetText: textVal,
-    theme: document.getElementById('theme-mode').value,
-    boxBg: document.getElementById('box-bg').value,
+    theme: themeSelect.value,
+    boxBg: boxBgSelect.value,
     fontFamily: document.getElementById('font-family').value,
     fontSize: document.getElementById('font-size').value + 'px'
   };
@@ -253,7 +258,7 @@ function prepareParticipantLobby() {
   stageBox.style.fontFamily = 'sans-serif';
   stageBox.style.fontSize = '20px';
   
-  // Set text color according to box bg lightness or theme
+  // High-contrast text colors based on overall theme selection
   if (experimentConfig.theme === 'dark') {
     stageBox.style.color = '#ffffff';
   } else {
@@ -289,15 +294,26 @@ function startTypingStage() {
   const textDisplay = document.getElementById('target-text-display');
   const typingInput = document.getElementById('typing-input');
 
+  // Styling text display box
   textDisplay.style.fontFamily = experimentConfig.fontFamily;
   textDisplay.style.fontSize = experimentConfig.fontSize;
   textDisplay.textContent = experimentConfig.targetText;
 
+  // Apply contrast styling explicitly to input field based on theme
+  if (experimentConfig.theme === 'dark') {
+    typingInput.style.backgroundColor = '#222222';
+    typingInput.style.color = '#ffffff';
+    typingInput.style.borderColor = '#666666';
+  } else {
+    typingInput.style.backgroundColor = '#ffffff';
+    typingInput.style.color = '#000000';
+    typingInput.style.borderColor = '#999999';
+  }
+
   typingInput.focus();
 
-  // Track keystrokes, timing, and errors
+  // Keypress & timing tracking
   typingInput.addEventListener('keydown', (e) => {
-    // Ignore meta keys (Shift, Control, Alt, CapsLock) in click counter
     if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;
 
     if (!typingActive) {
@@ -312,7 +328,7 @@ function startTypingStage() {
     }
   });
 
-  // Track completion
+  // Completion check
   typingInput.addEventListener('input', () => {
     if (typingInput.value === experimentConfig.targetText) {
       endTime = performance.now();
@@ -329,7 +345,7 @@ function finishTypingExperiment() {
   const durationSeconds = (endTime - startTime) / 1000;
   const clicksPerSecond = totalKeyPresses / durationSeconds;
   
-  // Standard WPM calculation: (Characters / 5) / Time in Minutes
+  // Standard WPM formula: (Characters / 5) / Time in Minutes
   const totalChars = experimentConfig.targetText.length;
   const wordsEquivalent = totalChars / 5;
   const wpm = (wordsEquivalent / (durationSeconds / 60));

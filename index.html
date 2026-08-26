@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Typing Speed Experiment</title>
+<style>
+  :root {
+    --bg-color: #ffffff;
+    --text-color: #000000;
+    --button-bg: #eeeeee;
+    --button-border: #999999;
+  }
+  body.dark-mode {
+    --bg-color: #111111;
+    --text-color: #ffffff;
+    --button-bg: #222222;
+    --button-border: #666666;
+  }
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: sans-serif;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+  .hidden { display: none !important; }
+  
+  #setup-panel {
+    width: 100%;
+    max-width: 750px;
+    border: 1px solid var(--button-border);
+    padding: 20px;
+    box-sizing: border-box;
+    background-color: var(--button-bg);
+  }
+  .form-group {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+  }
+  .form-row {
+    display: flex;
+    gap: 15px;
+  }
+  .form-row .form-group {
+    flex: 1;
+    justify-content: space-between;
+  }
+  label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 14px;
+  }
+  textarea, input, select, button {
+    padding: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    border: 1px solid var(--button-border);
+  }
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  textarea { height: 80px; resize: vertical; }
+  button {
+    cursor: pointer;
+    background-color: var(--text-color);
+    color: var(--bg-color);
+    font-weight: bold;
+    border: none;
+    padding: 10px 15px;
+  }
+
+  #stage-box {
+    width: 100%;
+    max-width: 900px;
+    min-height: 400px;
+    border: 2px solid var(--button-border);
+    position: relative;
+    box-sizing: border-box;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  
+  #target-text-display {
+    width: 100%;
+    text-align: left;
+    margin-bottom: 20px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  #typing-input {
+    width: 100%;
+    height: 120px;
+    box-sizing: border-box;
+    resize: none;
+    font-size: 18px;
+  }
+
+  #results-stage {
+    width: 100%;
+    max-width: 750px;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+  }
+  th, td {
+    border: 1px solid var(--button-border);
+    padding: 8px 12px;
+    text-align: center;
+  }
+  th {
+    background-color: var(--button-bg);
+  }
+</style>
+</head>
+<body>
+
+<!-- SETUP PANEL -->
+<div id="setup-panel">
+  <h2>Typing Speed Setup</h2>
+  
+  <div class="form-group">
+    <label for="prompt-text">Target Paragraph to Type:</label>
+    <textarea id="prompt-text">The quick brown fox jumps over the lazy dog.</textarea>
+  </div>
+  
+  <div class="form-row">
+    <div class="form-group">
+      <label for="theme-mode">Overall Theme:</label>
+      <select id="theme-mode">
+        <option value="light">Light (Black on White)</option>
+        <option value="dark">Dark (White on Black)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="box-bg">Display Box Colour:</label>
+      <select id="box-bg">
+        <option value="#ffffff">White</option>
+        <option value="#f8f9fa">Light Grey</option>
+        <option value="#f0e68c">Khaki / Yellow</option>
+        <option value="#e6f2ff">Light Blue</option>
+        <option value="#1e1e1e">Dark Grey</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="font-family">Font Family:</label>
+      <select id="font-family">
+        <option value="sans-serif">Sans-Serif</option>
+        <option value="serif">Serif</option>
+        <option value="monospace">Monospace</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="font-size">Font Size (px):</label>
+      <input type="number" id="font-size" value="22" min="14" max="48">
+    </div>
+  </div>
+
+  <button id="btn-start" style="margin-top: 15px;">Start Experiment</button>
+</div>
+
+<!-- MAIN STAGE BOX -->
+<div id="stage-box" class="hidden"></div>
+
+<!-- RESULTS STAGE -->
+<div id="results-stage" class="hidden">
+  <h2>Results</h2>
+  <div id="results-content" style="width: 100%;"></div>
+  <div class="button-group">
+    <button id="btn-next-participant">Next Participant</button>
+    <button id="btn-modify-setup">Modify Setup</button>
+  </div>
+</div>
+
+<script>
+let experimentConfig = {};
+let spaceState = 'IDLE'; // IDLE, LOBBY, TYPING
+
+// Metrics State
+let startTime = 0;
+let endTime = 0;
+let totalKeyPresses = 0;
+let totalMistakes = 0;
+let typingActive = false;
+
+const setupPanel = document.getElementById('setup-panel');
+const stageBox = document.getElementById('stage-box');
+const resultsStage = document.getElementById('results-stage');
+
+// Apply Theme
+document.getElementById('theme-mode').addEventListener('change', (e) => {
+  if (e.target.value === 'dark') {
+    document.body.classList.add('dark-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
+  }
+});
+
+// Start Experiment (Experimenter Step)
+document.getElementById('btn-start').addEventListener('click', () => {
+  const textVal = document.getElementById('prompt-text').value.trim();
+  if (textVal.length === 0) {
+    alert("Please enter a target paragraph for the typing test.");
+    return;
+  }
+
+  experimentConfig = {
+    targetText: textVal,
+    theme: document.getElementById('theme-mode').value,
+    boxBg: document.getElementById('box-bg').value,
+    fontFamily: document.getElementById('font-family').value,
+    fontSize: document.getElementById('font-size').value + 'px'
+  };
+
+  setupPanel.classList.add('hidden');
+  prepareParticipantLobby();
+});
+
+function prepareParticipantLobby() {
+  resultsStage.classList.add('hidden');
+  stageBox.classList.remove('hidden');
+  stageBox.style.backgroundColor = experimentConfig.boxBg;
+  stageBox.style.fontFamily = 'sans-serif';
+  stageBox.style.fontSize = '20px';
+  
+  // Set text color according to box bg lightness or theme
+  if (experimentConfig.theme === 'dark') {
+    stageBox.style.color = '#ffffff';
+  } else {
+    stageBox.style.color = '#000000';
+  }
+
+  stageBox.innerHTML = `
+    <h2>Typing Speed Test</h2>
+    <p style="margin-top: 30px;">Press <strong>SPACEBAR</strong> when you are ready to begin.</p>
+  `;
+  spaceState = 'LOBBY';
+}
+
+// Spacebar Listener for Lobby
+window.addEventListener('keydown', (e) => {
+  if (spaceState === 'LOBBY' && (e.code === 'Space' || e.key === ' ')) {
+    e.preventDefault();
+    spaceState = 'TYPING';
+    startTypingStage();
+  }
+});
+
+function startTypingStage() {
+  totalKeyPresses = 0;
+  totalMistakes = 0;
+  typingActive = false;
+
+  stageBox.innerHTML = `
+    <div id="target-text-display"></div>
+    <textarea id="typing-input" placeholder="Start typing here..."></textarea>
+  `;
+
+  const textDisplay = document.getElementById('target-text-display');
+  const typingInput = document.getElementById('typing-input');
+
+  textDisplay.style.fontFamily = experimentConfig.fontFamily;
+  textDisplay.style.fontSize = experimentConfig.fontSize;
+  textDisplay.textContent = experimentConfig.targetText;
+
+  typingInput.focus();
+
+  // Track keystrokes, timing, and errors
+  typingInput.addEventListener('keydown', (e) => {
+    // Ignore meta keys (Shift, Control, Alt, CapsLock) in click counter
+    if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;
+
+    if (!typingActive) {
+      typingActive = true;
+      startTime = performance.now();
+    }
+
+    totalKeyPresses++;
+
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      totalMistakes++;
+    }
+  });
+
+  // Track completion
+  typingInput.addEventListener('input', () => {
+    if (typingInput.value === experimentConfig.targetText) {
+      endTime = performance.now();
+      finishTypingExperiment();
+    }
+  });
+}
+
+function finishTypingExperiment() {
+  stageBox.classList.add('hidden');
+  resultsStage.classList.remove('hidden');
+  spaceState = 'IDLE';
+
+  const durationSeconds = (endTime - startTime) / 1000;
+  const clicksPerSecond = totalKeyPresses / durationSeconds;
+  
+  // Standard WPM calculation: (Characters / 5) / Time in Minutes
+  const totalChars = experimentConfig.targetText.length;
+  const wordsEquivalent = totalChars / 5;
+  const wpm = (wordsEquivalent / (durationSeconds / 60));
+
+  const resultsContent = document.getElementById('results-content');
+  resultsContent.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Total Time Taken</td>
+          <td><strong>${durationSeconds.toFixed(2)}s</strong></td>
+        </tr>
+        <tr>
+          <td>Buttons Clicked (Total Keystrokes)</td>
+          <td><strong>${totalKeyPresses}</strong></td>
+        </tr>
+        <tr>
+          <td>Mistakes / Corrections (Backspaces)</td>
+          <td><strong>${totalMistakes}</strong></td>
+        </tr>
+        <tr>
+          <td>Clicks Per Second (CPS)</td>
+          <td><strong>${clicksPerSecond.toFixed(2)}</strong></td>
+        </tr>
+        <tr>
+          <td>Average Speed (WPM)</td>
+          <td><strong>${wpm.toFixed(1)} WPM</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+}
+
+// Reset Handlers
+document.getElementById('btn-next-participant').addEventListener('click', () => {
+  prepareParticipantLobby();
+});
+
+document.getElementById('btn-modify-setup').addEventListener('click', () => {
+  resultsStage.classList.add('hidden');
+  stageBox.classList.add('hidden');
+  setupPanel.classList.remove('hidden');
+  spaceState = 'IDLE';
+});
+</script>
+</body>
+</html>

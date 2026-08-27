@@ -356,6 +356,7 @@ function finishTypingExperiment() {
   const wpm = (wordsEquivalent / (durationSeconds / 60));
 
   currentResults = {
+    targetText: experimentConfig.targetText,
     time: durationSeconds.toFixed(2),
     keystrokes: totalKeyPresses,
     mistakes: totalMistakes,
@@ -373,6 +374,10 @@ function finishTypingExperiment() {
         </tr>
       </thead>
       <tbody>
+        <tr>
+          <td>Target Text</td>
+          <td><strong>${currentResults.targetText}</strong></td>
+        </tr>
         <tr>
           <td>Total Time Taken</td>
           <td><strong>${currentResults.time}s</strong></td>
@@ -411,14 +416,14 @@ function copyToClipboard(text, btnElement, originalLabel) {
 }
 
 document.getElementById('btn-copy-with-headers').addEventListener('click', (e) => {
-  const headers = ['Total Time (s)', 'Total Keystrokes', 'Mistakes', 'CPS', 'WPM'].join('\t');
-  const values = [currentResults.time, currentResults.keystrokes, currentResults.mistakes, currentResults.cps, currentResults.wpm].join('\t');
+  const headers = ['Target Text', 'Total Time (s)', 'Total Keystrokes', 'Mistakes', 'CPS', 'WPM'].join('\t');
+  const values = [currentResults.targetText, currentResults.time, currentResults.keystrokes, currentResults.mistakes, currentResults.cps, currentResults.wpm].join('\t');
   const textToCopy = `${headers}\n${values}`;
   copyToClipboard(textToCopy, e.target, 'Copy with Headers');
 });
 
 document.getElementById('btn-copy-data-only').addEventListener('click', (e) => {
-  const values = [currentResults.time, currentResults.keystrokes, currentResults.mistakes, currentResults.cps, currentResults.wpm].join('\t');
+  const values = [currentResults.targetText, currentResults.time, currentResults.keystrokes, currentResults.mistakes, currentResults.cps, currentResults.wpm].join('\t');
   copyToClipboard(values, e.target, 'Copy Data Only');
 });
 

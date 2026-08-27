@@ -123,6 +123,8 @@
     display: flex;
     gap: 15px;
     margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   table {
@@ -198,6 +200,8 @@
   <h2>Results</h2>
   <div id="results-content" style="width: 100%;"></div>
   <div class="button-group">
+    <button id="btn-copy-with-headers">Copy with Headers</button>
+    <button id="btn-copy-data-only">Copy Data Only</button>
     <button id="btn-next-participant">Next Participant</button>
     <button id="btn-modify-setup">Modify Setup</button>
   </div>
@@ -213,6 +217,7 @@ let endTime = 0;
 let totalKeyPresses = 0;
 let totalMistakes = 0;
 let typingActive = false;
+let currentResults = {};
 
 const setupPanel = document.getElementById('setup-panel');
 const stageBox = document.getElementById('stage-box');
@@ -350,6 +355,14 @@ function finishTypingExperiment() {
   const wordsEquivalent = totalChars / 5;
   const wpm = (wordsEquivalent / (durationSeconds / 60));
 
+  currentResults = {
+    time: durationSeconds.toFixed(2),
+    keystrokes: totalKeyPresses,
+    mistakes: totalMistakes,
+    cps: clicksPerSecond.toFixed(2),
+    wpm: wpm.toFixed(1)
+  };
+
   const resultsContent = document.getElementById('results-content');
   resultsContent.innerHTML = `
     <table>
@@ -362,28 +375,52 @@ function finishTypingExperiment() {
       <tbody>
         <tr>
           <td>Total Time Taken</td>
-          <td><strong>${durationSeconds.toFixed(2)}s</strong></td>
+          <td><strong>${currentResults.time}s</strong></td>
         </tr>
         <tr>
           <td>Buttons Clicked (Total Keystrokes)</td>
-          <td><strong>${totalKeyPresses}</strong></td>
+          <td><strong>${currentResults.keystrokes}</strong></td>
         </tr>
         <tr>
           <td>Mistakes / Corrections (Backspaces)</td>
-          <td><strong>${totalMistakes}</strong></td>
+          <td><strong>${currentResults.mistakes}</strong></td>
         </tr>
         <tr>
           <td>Clicks Per Second (CPS)</td>
-          <td><strong>${clicksPerSecond.toFixed(2)}</strong></td>
+          <td><strong>${currentResults.cps}</strong></td>
         </tr>
         <tr>
           <td>Average Speed (WPM)</td>
-          <td><strong>${wpm.toFixed(1)} WPM</strong></td>
+          <td><strong>${currentResults.wpm} WPM</strong></td>
         </tr>
       </tbody>
     </table>
   `;
 }
+
+// Clipboard Functions
+function copyToClipboard(text, btnElement, originalLabel) {
+  navigator.clipboard.writeText(text).then(() => {
+    btnElement.textContent = 'Copied!';
+    setTimeout(() => {
+      btnElement.textContent = originalLabel;
+    }, 1500);
+  }).catch(() => {
+    alert('Failed to copy metrics to clipboard.');
+  });
+}
+
+document.getElementById('btn-copy-with-headers').addEventListener('click', (e) => {
+  const headers = ['Total Time (s)', 'Total Keystrokes', 'Mistakes', 'CPS', 'WPM'].join('\t');
+  const values = [currentResults.time, currentResults.keystrokes, currentResults.mistakes, currentResults.cps, currentResults.wpm].join('\t');
+  const textToCopy = `${headers}\n${values}`;
+  copyToClipboard(textToCopy, e.target, 'Copy with Headers');
+});
+
+document.getElementById('btn-copy-data-only').addEventListener('click', (e) => {
+  const values = [currentResults.time, currentResults.keystrokes, currentResults.mistakes, currentResults.cps, currentResults.wpm].join('\t');
+  copyToClipboard(values, e.target, 'Copy Data Only');
+});
 
 // Reset Handlers
 document.getElementById('btn-next-participant').addEventListener('click', () => {
